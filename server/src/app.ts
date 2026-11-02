@@ -2,7 +2,9 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
+import pinoHttp from "pino-http";
 import { env } from "./config/env.js";
+import { logger } from "./config/logger.js";
 import authRoutes from "./modules/auth/auth.routes.js";
 import taskRoutes from "./modules/tasks/task.routes.js";
 import projectRoutes from "./modules/projects/project.routes.js";
@@ -11,7 +13,9 @@ import diaryRoutes from "./modules/diary/diary.routes.js";
 import habitRoutes from "./modules/habits/habit.routes.js";
 import calendarRoutes from "./modules/calendar/calendar.routes.js";
 import financeRoutes from "./modules/finance/finance.routes.js";
+import mediaRoutes from "./modules/media/media.routes.js";
 import { requireAuth } from "./modules/auth/auth.middleware.js";
+import { notFound } from "./shared/middleware/not-found.js";
 import { errorHandler } from "./shared/middleware/error-handler.js";
 
 export function createApp() {
@@ -27,6 +31,14 @@ export function createApp() {
   }));
   app.use(express.json({ limit: "1mb" }));
   app.use(cookieParser());
+  app.use(pinoHttp({
+    logger,
+    serializers: {
+      req(request) {
+        return { method: request.method, url: (request.url ?? "").split("?")[0], remoteAddress: request.remoteAddress };
+      }
+    }
+  }));
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
   app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/tasks", requireAuth, taskRoutes);
@@ -36,6 +48,8 @@ export function createApp() {
   app.use("/api/v1/habits", requireAuth, habitRoutes);
   app.use("/api/v1/calendar", requireAuth, calendarRoutes);
   app.use("/api/v1/finance", requireAuth, financeRoutes);
+  app.use("/api/v1/media", requireAuth, mediaRoutes);
+  app.use(notFound);
   app.use(errorHandler);
   return app;
 }

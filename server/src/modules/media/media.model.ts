@@ -1,5 +1,4 @@
 import { Schema, model } from "mongoose";
-
 const mediaAssetSchema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
   parentType: { type: String, enum: ["task", "project", "diary"], required: true },
@@ -16,9 +15,9 @@ const mediaAssetSchema = new Schema({
   caption: { type: String, maxlength: 500, default: "" },
   status: { type: String, enum: ["pending", "attached", "deletion_pending"], default: "pending", index: true },
   expiresAt: { type: Date, default: null },
+  cleanupAttempts: { type: Number, default: 0 },
   lastCleanupError: { type: String, default: null }
 }, { timestamps: true, versionKey: false });
-
 mediaAssetSchema.index({ userId: 1, parentType: 1, parentId: 1, status: 1 });
-mediaAssetSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0, sparse: true });
+mediaAssetSchema.index({ status: 1, expiresAt: 1 });
 export const MediaAsset = model("MediaAsset", mediaAssetSchema);

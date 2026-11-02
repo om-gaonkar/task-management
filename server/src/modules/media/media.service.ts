@@ -11,13 +11,14 @@ import { MediaAsset } from "./media.model.js";
 const MAX_BYTES = 8 * 1024 * 1024;
 const FORMATS = new Set(["jpg", "jpeg", "png", "webp", "gif"]);
 const MAX_BY_PARENT = { task: 8, project: 16, diary: 8 } as const;
+type ParentType = "task" | "project" | "diary";
 
 function ensureCloudinary() {
   if (!env.cloudinaryConfigured || !env.CLOUDINARY_API_SECRET || !env.CLOUDINARY_CLOUD_NAME || !env.CLOUDINARY_API_KEY) {
     throw new AppError("Image storage is not configured", 503, "MEDIA_NOT_CONFIGURED");
   }
 }
-async function assertParent(userId: Types.ObjectId, parentType: "task" | "project" | "diary", parentId: string) {
+async function assertParent(userId: Types.ObjectId, parentType: ParentType, parentId: string) {
   const exists = parentType === "task"
     ? await Task.exists({ _id: parentId, userId, deletedAt: null })
     : parentType === "project"
@@ -25,10 +26,23 @@ async function assertParent(userId: Types.ObjectId, parentType: "task" | "projec
       : await DiaryEntry.exists({ _id: parentId, userId });
   if (!exists) throw new AppError("Parent record not found", 404, "MEDIA_PARENT_NOT_FOUND");
 }
-function mediaArrayField(parentType: "task" | "project" | "diary") {
-  return parentType === "diary" ? "imageMediaIds" : "mediaIds";
+async function attachToParent(userId: Types.ObjectId, parentType: ParentType, parentId: Types.ObjectId, mediaId: Types.ObjectId) {
+  const update = { $addToSet: { ...(parentType === "diary" ? { imageMediaIds: mediaId } : { mediaIds: mediaId }) } };
+  const result = parentType === "task"
+    ? await Task.updateOne({ _id: parentId, userId, deletedAt: null }, update)
+    : parentType === "project"
+      ? await Project.updateOne({ _id: parentId, userId, archivedAt: null }, update)
+      : await DiaryEntry.updateOne({ _id: parentId, userId }, update);
+  return result.matchedCount > 0;
 }
-export async function createUploadSignature(userId: Types.ObjectId, input: { parentType: "task" | "project" | "diary"; parentId: string }) {
+async function detachFromParent(userId: Types.ObjectId, parentType: ParentType, parentId: Types.ObjectId, mediaId: Types.ObjectId) {
+  const update = { $pull: { ...(parentType === "diary" ? { imageMediaIds: mediaId } : { mediaIds: mediaId }) } };
+  if (parentType === "task") await Task.updateOne({ _id: parentId, userId }, update);
+  else if (parentType === "project") await Project.updateOne({ _id: parentId, userId }, update);
+  else await DiaryEntry.updateOne({ _id: parentId, userId }, update);
+}
+
+export async function createUploadSignature(userId: Types.ObjectId, input: { parentType: ParentType; parentId: string }) {
   ensureCloudinary();
   await assertParent(userId, input.parentType, input.parentId);
   const activeCount = await MediaAsset.countDocuments({
@@ -37,13 +51,13 @@ export async function createUploadSignature(userId: Types.ObjectId, input: { par
   if (activeCount >= MAX_BY_PARENT[input.parentType]) throw new AppError("Attachment limit reached for this item", 400, "MEDIA_LIMIT_REACHED");
 
   const folder = `${env.CLOUDINARY_UPLOAD_FOLDER}/${userId.toString()}`;
-  const publicId = `${folder}/${randomUUID()}`;
+  const publicId = randomUUID();
   const timestamp = Math.floor(Date.now() / 1000);
   const params = { timestamp, folder, public_id: publicId, overwrite: false, allowed_formats: [...FORMATS].join(",") };
   const signature = cloudinary.utils.api_sign_request(params, env.CLOUDINARY_API_SECRET!);
   const pending = await MediaAsset.create({
     userId, parentType: input.parentType, parentId: new Types.ObjectId(input.parentId),
-    publicId, status: "pending", expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000)
+    publicId: `${folder}/${publicId}`, status: "pending", expiresAt: new Date(Date.now() + 20 * 60 * 1000)
   });
   return {
     mediaId: pending._id.toString(), cloudName: env.CLOUDINARY_CLOUD_NAME, apiKey: env.CLOUDINARY_API_KEY,
@@ -61,7 +75,7 @@ export async function confirmUpload(userId: Types.ObjectId, input: { mediaId: st
   if (pending.status !== "pending" || !pending.expiresAt || pending.expiresAt <= new Date()) {
     throw new AppError("Upload authorization expired", 410, "UPLOAD_EXPIRED");
   }
-  await assertParent(userId, pending.parentType, pending.parentId.toString());
+  await assertParent(userId, pending.parentType as ParentType, pending.parentId.toString());
   const uploaded = await cloudinary.api.resource(pending.publicId, { resource_type: "image", type: "upload" });
   if (uploaded.public_id !== pending.publicId || uploaded.resource_type !== "image") {
     throw new AppError("Uploaded asset could not be verified", 400, "UPLOAD_VERIFICATION_FAILED");
@@ -86,19 +100,15 @@ export async function confirmUpload(userId: Types.ObjectId, input: { mediaId: st
     if (existing) return existing.toObject();
     throw new AppError("Upload could not be attached", 409, "UPLOAD_CONFIRM_CONFLICT");
   }
-
-  const field = mediaArrayField(attached.parentType);
-  const parentFilter = { _id: attached.parentId, userId };
-  const parentUpdate = await (attached.parentType === "task" ? Task : attached.parentType === "project" ? Project : DiaryEntry)
-    .updateOne(parentFilter, { $addToSet: { [field]: attached._id } });
-  if (!parentUpdate.matchedCount) {
-    await MediaAsset.updateOne({ _id: attached._id, userId }, { $set: { status: "deletion_pending" } });
+  const parentUpdated = await attachToParent(userId, attached.parentType as ParentType, attached.parentId, attached._id);
+  if (!parentUpdated) {
+    await MediaAsset.updateOne({ _id: attached._id, userId }, { $set: { status: "deletion_pending", lastCleanupError: "Parent record no longer exists" } });
     throw new AppError("Parent record no longer exists; asset queued for cleanup", 409, "MEDIA_PARENT_REMOVED");
   }
   return attached.toObject();
 }
 
-export async function listAttachments(userId: Types.ObjectId, mediaId: string) {
+export async function listAttachment(userId: Types.ObjectId, mediaId: string) {
   const media = await MediaAsset.findOne({ _id: mediaId, userId, status: "attached" }).lean();
   if (!media) throw new AppError("Attachment not found", 404, "MEDIA_NOT_FOUND");
   return media;
@@ -108,9 +118,7 @@ export async function deleteAttachment(userId: Types.ObjectId, mediaId: string) 
   ensureCloudinary();
   const media = await MediaAsset.findOne({ _id: mediaId, userId, status: "attached" });
   if (!media) throw new AppError("Attachment not found", 404, "MEDIA_NOT_FOUND");
-  const field = mediaArrayField(media.parentType);
-  const parentModel = media.parentType === "task" ? Task : media.parentType === "project" ? Project : DiaryEntry;
-  await parentModel.updateOne({ _id: media.parentId, userId }, { $pull: { [field]: media._id } });
+  await detachFromParent(userId, media.parentType as ParentType, media.parentId, media._id);
   try {
     const result = await cloudinary.uploader.destroy(media.publicId, { resource_type: "image", invalidate: true });
     if (result.result !== "ok" && result.result !== "not found") throw new Error("Cloudinary did not confirm deletion");
@@ -121,5 +129,27 @@ export async function deleteAttachment(userId: Types.ObjectId, mediaId: string) 
     media.lastCleanupError = "Remote asset deletion failed; retry cleanup";
     await media.save();
     return { deleted: false, cleanupPending: true };
+  }
+}
+
+export async function runMediaCleanup() {
+  if (!env.cloudinaryConfigured) return;
+  const candidates = await MediaAsset.find({
+    $or: [
+      { status: "pending", expiresAt: { $lte: new Date() } },
+      { status: "deletion_pending", updatedAt: { $lte: new Date(Date.now() - 5 * 60 * 1000) } }
+    ]
+  }).limit(100);
+  for (const media of candidates) {
+    try {
+      const result = await cloudinary.uploader.destroy(media.publicId, { resource_type: "image", invalidate: true });
+      if (result.result !== "ok" && result.result !== "not found") throw new Error("Cloudinary cleanup did not complete");
+      await MediaAsset.deleteOne({ _id: media._id });
+    } catch {
+      media.cleanupAttempts += 1;
+      media.lastCleanupError = "Cloudinary cleanup attempt failed";
+      media.updatedAt = new Date();
+      await media.save();
+    }
   }
 }

@@ -3,16 +3,22 @@ import { createApp } from "./app.js";
 import { connectDatabase, disconnectDatabase } from "./config/database.js";
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
+import { runMediaCleanup } from "./modules/media/media.service.js";
 
 async function main() {
   await connectDatabase();
   const app = createApp();
   const server = app.listen(env.PORT, () => logger.info({ port: env.PORT }, "API listening"));
+  const cleanupTimer = setInterval(() => {
+    void runMediaCleanup().catch((error) => logger.error({ err: error }, "Media cleanup job failed"));
+  }, 30 * 60 * 1000);
+  cleanupTimer.unref();
+  void runMediaCleanup().catch((error) => logger.error({ err: error }, "Initial media cleanup failed"));
+
   const shutdown = (signal: string) => {
     logger.info({ signal }, "Shutting down");
-    server.close(() => {
-      void disconnectDatabase().finally(() => process.exit(0));
-    });
+    clearInterval(cleanupTimer);
+    server.close(() => { void disconnectDatabase().finally(() => process.exit(0)); });
   };
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
