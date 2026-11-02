@@ -1,0 +1,59 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { ArrowRight, CheckCircle2, LockKeyhole, Mail, Sparkles, UserRound } from "lucide-react";
+import { API_BASE_URL } from "../../lib/api-client";
+import { authQueryKey, login, register } from "./auth.api";
+import { loginSchema, registerSchema, type LoginValues, type RegisterValues } from "./auth.schemas";
+
+export function AuthPage({ initialMode = "login" }: { initialMode?: "login" | "register" }) {
+  const [mode, setMode] = useState(initialMode);
+  const [verification, setVerification] = useState<{ email: string; token?: string } | null>(null);
+  const queryClient = useQueryClient();
+  const loginForm = useForm<LoginValues>({ resolver: zodResolver(loginSchema), defaultValues: { email: "", password: "" } });
+  const registerForm = useForm<RegisterValues>({ resolver: zodResolver(registerSchema), defaultValues: { name: "", email: "", password: "" } });
+  const loginMutation = useMutation({
+    mutationFn: login,
+    onSuccess: user => queryClient.setQueryData(authQueryKey, user)
+  });
+  const registerMutation = useMutation({
+    mutationFn: register,
+    onSuccess: result => setVerification({ email: result.user.email, token: result.developmentVerificationToken })
+  });
+
+  if (verification) {
+    return <AuthFrame><div className="auth-success-icon"><CheckCircle2 size={25}/></div><span className="eyebrow">ONE LAST STEP</span><h1>Check your inbox.</h1><p className="auth-description">We sent an email verification link to <strong>{verification.email}</strong>. Verify your address before signing in.</p>{verification.token && <div className="dev-token"><span>Development verification token</span><code>{verification.token}</code><small>Use this token on the verification screen in local development. Never expose this in production.</small></div>}<Link to="/login" className="button button-primary auth-submit">Back to sign in <ArrowRight size={16}/></Link></AuthFrame>;
+  }
+
+  return <AuthFrame>
+    <div className="auth-brand"><div className="brand-mark">d.</div><span>daymark</span></div>
+    <span className="eyebrow">{mode === "login" ? "WELCOME BACK" : "MAKE SPACE FOR WHAT MATTERS"}</span>
+    <h1>{mode === "login" ? "A clearer day starts here." : "Create your workspace."}</h1>
+    <p className="auth-description">{mode === "login" ? "Sign in to pick up where you left off." : "One home for the projects, habits, notes, and plans that move you forward."}</p>
+
+    {mode === "login" ? <form className="auth-form" onSubmit={loginForm.handleSubmit(values => loginMutation.mutate(values))} noValidate>
+      <label>Email address</label><div className="auth-input-wrap"><Mail size={16}/><input type="email" autoComplete="email" placeholder="you@example.com" {...loginForm.register("email")}/></div>{loginForm.formState.errors.email && <small className="field-error">{loginForm.formState.errors.email.message}</small>}
+      <label>Password</label><div className="auth-input-wrap"><LockKeyhole size={16}/><input type="password" autoComplete="current-password" placeholder="Your password" {...loginForm.register("password")}/></div>{loginForm.formState.errors.password && <small className="field-error">{loginForm.formState.errors.password.message}</small>}
+      {loginMutation.error && <p className="form-error">{loginMutation.error.message}</p>}
+      <div className="auth-form-meta"><Link to="/forgot-password">Forgot password?</Link></div>
+      <button className="button button-primary auth-submit" disabled={loginMutation.isPending}>{loginMutation.isPending ? "Signing in…" : "Sign in"} <ArrowRight size={16}/></button>
+    </form> : <form className="auth-form" onSubmit={registerForm.handleSubmit(values => registerMutation.mutate(values))} noValidate>
+      <label>Your name</label><div className="auth-input-wrap"><UserRound size={16}/><input autoComplete="name" placeholder="Your name" {...registerForm.register("name")}/></div>{registerForm.formState.errors.name && <small className="field-error">{registerForm.formState.errors.name.message}</small>}
+      <label>Email address</label><div className="auth-input-wrap"><Mail size={16}/><input type="email" autoComplete="email" placeholder="you@example.com" {...registerForm.register("email")}/></div>{registerForm.formState.errors.email && <small className="field-error">{registerForm.formState.errors.email.message}</small>}
+      <label>Password</label><div className="auth-input-wrap"><LockKeyhole size={16}/><input type="password" autoComplete="new-password" placeholder="At least 10 characters" {...registerForm.register("password")}/></div>{registerForm.formState.errors.password && <small className="field-error">{registerForm.formState.errors.password.message}</small>}
+      {registerMutation.error && <p className="form-error">{registerMutation.error.message}</p>}
+      <button className="button button-primary auth-submit" disabled={registerMutation.isPending}>{registerMutation.isPending ? "Creating account…" : "Create account"} <ArrowRight size={16}/></button>
+    </form>}
+
+    <div className="auth-divider"><span/>or continue with<span/></div>
+    <button className="google-button" onClick={() => window.location.assign(`${API_BASE_URL}/auth/google`)}><span className="google-mark">G</span> Continue with Google</button>
+    <p className="auth-switch">{mode === "login" ? "New to Daymark?" : "Already have an account?"} <button onClick={() => { setMode(mode === "login" ? "register" : "login"); loginMutation.reset(); registerMutation.reset(); }}>{mode === "login" ? "Create an account" : "Sign in"}</button></p>
+    <p className="auth-privacy"><Sparkles size={13}/> Your workspace is private to your account.</p>
+  </AuthFrame>;
+}
+
+function AuthFrame({ children }: { children: React.ReactNode }) {
+  return <main className="auth-screen"><div className="auth-side"><div className="auth-side-brand"><div className="brand-mark">d.</div><strong>daymark</strong></div><div className="auth-side-copy"><span className="eyebrow">MAKE ROOM FOR MEANINGFUL WORK</span><h2>Less scattered.<br/><em>More intentional.</em></h2><p>Bring your tasks, projects, habits, journal, and finances into one calm place.</p><div className="auth-side-note"><Sparkles size={16}/> A little progress, consistently, adds up.</div></div><span className="auth-side-footer">A personal workspace for your everyday.</span></div><section className="auth-panel">{children}</section></main>;
+}
