@@ -57,11 +57,11 @@ export async function createUploadSignature(userId: Types.ObjectId, input: { par
   const signature = cloudinary.utils.api_sign_request(params, env.CLOUDINARY_API_SECRET!);
   const pending = await MediaAsset.create({
     userId, parentType: input.parentType, parentId: new Types.ObjectId(input.parentId),
-    publicId: `${folder}/${publicId}`, status: "pending", expiresAt: new Date(Date.now() + 20 * 60 * 1000)
+    publicId, status: "pending", expiresAt: new Date(Date.now() + 20 * 60 * 1000)
   });
   return {
     mediaId: pending._id.toString(), cloudName: env.CLOUDINARY_CLOUD_NAME, apiKey: env.CLOUDINARY_API_KEY,
-    timestamp, signature, folder, publicId, resourceType: "image",
+    timestamp, signature, folder, publicId, overwrite: false, allowedFormats: [...FORMATS].join(","), resourceType: "image",
     uploadUrl: `https://api.cloudinary.com/v1_1/${env.CLOUDINARY_CLOUD_NAME}/image/upload`,
     maxBytes: MAX_BYTES
   };
@@ -106,6 +106,14 @@ export async function confirmUpload(userId: Types.ObjectId, input: { mediaId: st
     throw new AppError("Parent record no longer exists; asset queued for cleanup", 409, "MEDIA_PARENT_REMOVED");
   }
   return attached.toObject();
+}
+
+export async function listParentAttachments(userId: Types.ObjectId, parentType: ParentType, parentId: string) {
+  await assertParent(userId, parentType, parentId);
+  return MediaAsset.find({ userId, parentType, parentId, status: "attached" })
+    .sort({ createdAt: 1 })
+    .select("_id publicId secureUrl format width height bytes altText caption createdAt")
+    .lean();
 }
 
 export async function listAttachment(userId: Types.ObjectId, mediaId: string) {
