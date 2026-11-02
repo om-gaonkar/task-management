@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { rateLimit } from "express-rate-limit";
+import { validateBody } from "../../shared/middleware/validate.js";
+import * as controller from "./media.controller.js";
+import { confirmUploadSchema, uploadSignatureSchema } from "./media.validation.js";
+const router = Router();
+const uploadLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 40, standardHeaders: "draft-8", legacyHeaders: false });
+router.post("/upload-signature", uploadLimiter, validateBody(uploadSignatureSchema), controller.sign);
+router.post("/confirm-upload", uploadLimiter, validateBody(confirmUploadSchema), controller.confirm);
+router.get("/:mediaId", controller.get);
+router.delete("/:mediaId", controller.remove);
+export default router;

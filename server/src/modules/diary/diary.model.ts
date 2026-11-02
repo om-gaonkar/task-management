@@ -1,4 +1,4 @@
-import { Schema, model } from "mongoose";
+import {Schema,model} from "mongoose";
 const diaryEntrySchema=new Schema({
   userId:{type:Schema.Types.ObjectId,ref:"User",required:true,index:true},
   title:{type:String,trim:true,default:"",maxlength:160},
@@ -7,7 +7,8 @@ const diaryEntrySchema=new Schema({
   entryDate:{type:Date,required:true},
   timezone:{type:String,required:true,default:"Asia/Kolkata"},
   tagIds:[{type:Schema.Types.ObjectId,ref:"Tag"}],
-  mood:{type:String,default:null, maxlength:40},
+  imageMediaIds:[{type:Schema.Types.ObjectId,ref:"MediaAsset"}],
+  mood:{type:String,default:null,maxlength:40},
   linkedTaskIds:[{type:Schema.Types.ObjectId,ref:"Task"}],
   linkedProjectIds:[{type:Schema.Types.ObjectId,ref:"Project"}],
   version:{type:Number,default:1}
