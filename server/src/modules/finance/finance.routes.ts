@@ -1,0 +1,18 @@
+import {Router} from "express";
+import {validateBody} from "../../shared/middleware/validate.js";
+import * as controller from "./finance.controller.js";
+import {budgetSchema,categorySchema,transactionSchema,updateTransactionSchema} from "./finance.validation.js";
+const router=Router();
+router.get("/categories",controller.categories);
+router.post("/categories",validateBody(categorySchema),controller.createCategory);
+router.delete("/categories/:categoryId",controller.archiveCategory);
+router.get("/transactions",controller.list);
+router.post("/transactions",validateBody(transactionSchema),controller.create);
+router.get("/export",controller.exportCsv);
+router.get("/summary",controller.summary);
+router.get("/budgets",controller.budgets);
+router.post("/budgets",validateBody(budgetSchema),controller.upsertBudget);
+router.get("/projects/:projectId/expenses",controller.projectExpenses);
+router.patch("/transactions/:transactionId",validateBody(updateTransactionSchema),controller.update);
+router.delete("/transactions/:transactionId",controller.remove);
+export default router;
