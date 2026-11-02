@@ -11,17 +11,21 @@ const sessionSchema = new Schema({
   userAgent: { type: String, default: null },
   ipAddress: { type: String, default: null }
 }, { versionKey: false });
-
 sessionSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 sessionSchema.index({ userId: 1, revokedAt: 1 });
 
-const verificationSchema = new Schema({
-  userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-  tokenHash: { type: String, required: true, unique: true, select: false },
-  expiresAt: { type: Date, required: true, index: true }
-}, { timestamps: true, versionKey: false });
-verificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+function tokenSchema() {
+  const schema = new Schema({
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    tokenHash: { type: String, required: true, unique: true, select: false },
+    expiresAt: { type: Date, required: true, index: true },
+    usedAt: { type: Date, default: null }
+  }, { timestamps: true, versionKey: false });
+  schema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  return schema;
+}
 
 export type SessionDocument = InferSchemaType<typeof sessionSchema>;
 export const Session = model("Session", sessionSchema);
-export const EmailVerificationToken = model("EmailVerificationToken", verificationSchema);
+export const EmailVerificationToken = model("EmailVerificationToken", tokenSchema());
+export const PasswordResetToken = model("PasswordResetToken", tokenSchema());
