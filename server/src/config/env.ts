@@ -25,8 +25,12 @@ const schema = z.object({
 });
 
 const parsed = schema.safeParse(process.env);
-if (!parsed.success) {
-  throw new Error(`Invalid environment configuration: ${parsed.error.message}`);
+if (!parsed.success) throw new Error(`Invalid environment configuration: ${parsed.error.message}`);
+if (parsed.data.NODE_ENV === "production" && !parsed.data.COOKIE_SECURE) {
+  throw new Error("COOKIE_SECURE must be true in production");
+}
+if (parsed.data.COOKIE_SAME_SITE === "none" && !parsed.data.COOKIE_SECURE) {
+  throw new Error("COOKIE_SECURE must be true when COOKIE_SAME_SITE is none");
 }
 
 export const env = {
