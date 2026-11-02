@@ -37,7 +37,7 @@ export function MediaGallery({parentType,parentId}: {parentType:ParentType;paren
    return result;
   },
   onSuccess:async()=>{setProgress(100);setMessage("Image attached.");await queryClient.invalidateQueries({queryKey});},
-  onError:error=>setMessage(error instanceof Error?error.message:"Could not upload the image."),
+  onError:error=>{setMessage(error instanceof Error?error.message:"Could not upload the image.");void queryClient.invalidateQueries({queryKey});},
   onSettled:()=>{if(inputRef.current)inputRef.current.value="";}
  });
  const removeMutation=useMutation({mutationFn:(id:string)=>api(`/media/${id}`,{method:"DELETE"}),onSuccess:()=>void queryClient.invalidateQueries({queryKey})});

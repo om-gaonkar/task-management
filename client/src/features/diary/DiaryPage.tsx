@@ -31,7 +31,7 @@ export function DiaryPage(){
   return()=>window.clearTimeout(timeout);
  },[dirty,title,content,activeEntry,version,saveState,start,timezone,queryClient,dateKey]);
  const statusLabel=useMemo(()=>({saved:"Saved",dirty:"Unsaved changes",saving:"Saving…",error:"Save failed",conflict:"Edit conflict"}[saveState]),[saveState]);
- function confirmDiscard(){return !dirty||window.confirm("You have unsaved changes. Discard them and continue?");}
+ function confirmDiscard(){if(savingRef.current){window.alert("A save is still in progress. Wait for it to finish before switching entries.");return false;}return !dirty||window.confirm("You have unsaved changes. Discard them and continue?");}
  function selectEntry(entry:DiaryEntry){if(!confirmDiscard())return;const nextContent=typeof entry.content==="string"?entry.content:"";setActiveEntry(entry._id);setTitle(entry.title);setContent(nextContent);setSavedSnapshot({title:entry.title,content:nextContent});setVersion(entry.version);setSaveState("saved");}
  function newEntry(){if(!confirmDiscard())return;setActiveEntry(null);setTitle("");setContent("");setSavedSnapshot({title:"",content:""});setVersion(1);setSaveState("saved");}
  function changeDay(next:Date){if(!confirmDiscard())return;setDay(startOfDay(next));}
