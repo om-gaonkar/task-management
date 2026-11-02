@@ -1,0 +1,13 @@
+import {Router} from "express";
+import {validateBody} from "../../shared/middleware/validate.js";
+import * as controller from "./habit.controller.js";
+import {completionSchema,createHabitSchema,updateHabitSchema} from "./habit.validation.js";
+const router=Router();
+router.get("/",controller.list);
+router.post("/",validateBody(createHabitSchema),controller.create);
+router.post("/:habitId/completions",validateBody(completionSchema),controller.complete);
+router.get("/:habitId/history",controller.history);
+router.get("/:habitId/stats",controller.stats);
+router.patch("/:habitId",validateBody(updateHabitSchema),controller.update);
+router.delete("/:habitId",controller.archive);
+export default router;
