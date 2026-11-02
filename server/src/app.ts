@@ -4,6 +4,14 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { env } from "./config/env.js";
 import authRoutes from "./modules/auth/auth.routes.js";
+import taskRoutes from "./modules/tasks/task.routes.js";
+import projectRoutes from "./modules/projects/project.routes.js";
+import tagRoutes from "./modules/tags/tag.routes.js";
+import diaryRoutes from "./modules/diary/diary.routes.js";
+import habitRoutes from "./modules/habits/habit.routes.js";
+import calendarRoutes from "./modules/calendar/calendar.routes.js";
+import financeRoutes from "./modules/finance/finance.routes.js";
+import { requireAuth } from "./modules/auth/auth.middleware.js";
 import { errorHandler } from "./shared/middleware/error-handler.js";
 
 export function createApp() {
@@ -11,11 +19,23 @@ export function createApp() {
   app.disable("x-powered-by");
   if (env.TRUST_PROXY) app.set("trust proxy", 1);
   app.use(helmet());
-  app.use(cors({ origin: env.CLIENT_URL, credentials: true, methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"], allowedHeaders: ["Content-Type", "X-CSRF-Token"] }));
+  app.use(cors({
+    origin: env.CLIENT_URL,
+    credentials: true,
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "X-CSRF-Token"]
+  }));
   app.use(express.json({ limit: "1mb" }));
   app.use(cookieParser());
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
   app.use("/api/v1/auth", authRoutes);
+  app.use("/api/v1/tasks", requireAuth, taskRoutes);
+  app.use("/api/v1/projects", requireAuth, projectRoutes);
+  app.use("/api/v1/tags", requireAuth, tagRoutes);
+  app.use("/api/v1/diary", requireAuth, diaryRoutes);
+  app.use("/api/v1/habits", requireAuth, habitRoutes);
+  app.use("/api/v1/calendar", requireAuth, calendarRoutes);
+  app.use("/api/v1/finance", requireAuth, financeRoutes);
   app.use(errorHandler);
   return app;
 }

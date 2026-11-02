@@ -1,5 +1,6 @@
+import "dotenv/config";
 import { createApp } from "./app.js";
-import { connectDatabase } from "./config/database.js";
+import { connectDatabase, disconnectDatabase } from "./config/database.js";
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 
@@ -9,7 +10,9 @@ async function main() {
   const server = app.listen(env.PORT, () => logger.info({ port: env.PORT }, "API listening"));
   const shutdown = (signal: string) => {
     logger.info({ signal }, "Shutting down");
-    server.close(() => process.exit(0));
+    server.close(() => {
+      void disconnectDatabase().finally(() => process.exit(0));
+    });
   };
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
