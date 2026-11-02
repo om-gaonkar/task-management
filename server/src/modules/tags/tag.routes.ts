@@ -1,0 +1,10 @@
+import {Router} from "express";
+import {validateBody} from "../../shared/middleware/validate.js";
+import * as controller from "./tag.controller.js";
+import {createTagSchema,updateTagSchema} from "./tag.validation.js";
+const router=Router();
+router.get("/",controller.list);
+router.post("/",validateBody(createTagSchema),controller.create);
+router.patch("/:tagId",validateBody(updateTagSchema),controller.update);
+router.delete("/:tagId",controller.remove);
+export default router;

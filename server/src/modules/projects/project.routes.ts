@@ -1,0 +1,12 @@
+import { Router } from "express";
+import { validateBody } from "../../shared/middleware/validate.js";
+import * as controller from "./project.controller.js";
+import { createProjectSchema, updateProjectSchema } from "./project.validation.js";
+const router=Router();
+router.get("/",controller.list);
+router.post("/",validateBody(createProjectSchema),controller.create);
+router.get("/:projectId/tasks",controller.tasks);
+router.get("/:projectId",controller.get);
+router.patch("/:projectId",validateBody(updateProjectSchema),controller.update);
+router.delete("/:projectId",controller.archive);
+export default router;
