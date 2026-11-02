@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Monitor, Moon, Sun, ShieldCheck, UserRound, Laptop, LogOut, Trash2 } from "lucide-react";
+import { Monitor, Moon, Sun, ShieldCheck, UserRound, Laptop, LogOut } from "lucide-react";
 import { api } from "../../lib/api-client";
 import { authQueryKey, getCurrentUser, type AuthUser } from "../auth/auth.api";
 import { useTheme, type Theme } from "../../app/theme";

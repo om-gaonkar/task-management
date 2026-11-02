@@ -16,6 +16,7 @@ import calendarRoutes from "./modules/calendar/calendar.routes.js";
 import financeRoutes from "./modules/finance/finance.routes.js";
 import analyticsRoutes from "./modules/analytics/analytics.routes.js";
 import mediaRoutes from "./modules/media/media.routes.js";
+import searchRoutes from "./modules/search/search.routes.js";
 import { requireAuth } from "./modules/auth/auth.middleware.js";
 import { notFound } from "./shared/middleware/not-found.js";
 import { errorHandler } from "./shared/middleware/error-handler.js";
@@ -37,13 +38,18 @@ export function createApp() {
     logger,
     serializers: {
       req(request) {
-        return { method: request.method, url: (request.url ?? "").split("?")[0], remoteAddress: request.remoteAddress };
+        return {
+          method: request.method,
+          url: (request.url ?? "").split("?")[0],
+          remoteAddress: request.socket?.remoteAddress
+        };
       }
     }
   }));
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
   app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/users", requireAuth, userRoutes);
+  app.use("/api/v1/search", requireAuth, searchRoutes);
   app.use("/api/v1/tasks", requireAuth, taskRoutes);
   app.use("/api/v1/projects", requireAuth, projectRoutes);
   app.use("/api/v1/tags", requireAuth, tagRoutes);

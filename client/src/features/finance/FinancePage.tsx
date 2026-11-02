@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDownLeft, ArrowUpRight, Download, Plus, Wallet } from "lucide-react";
-import { addMonths, endOfMonth, format, startOfMonth } from "date-fns";
+import { addMonths, format, startOfMonth } from "date-fns";
 import { api, API_BASE_URL } from "../../lib/api-client";
 import { authQueryKey, type AuthUser } from "../auth/auth.api";
 
