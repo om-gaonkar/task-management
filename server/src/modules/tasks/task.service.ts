@@ -29,18 +29,18 @@ async function assertTags(userId: Types.ObjectId, tagIds: string[] = []) {
   const count = await Tag.countDocuments({ _id: { $in: tagIds }, userId });
   if (count !== new Set(tagIds).size) throw new AppError("One or more tags do not belong to this account", 400, "INVALID_TAGS");
 }
-async function assertParent(userId: Types.ObjectId, parentId?: string | null, taskId?: string) {
-  if (!parentId) return;
+async function getValidParent(userId: Types.ObjectId, parentId?: string | null, taskId?: string) {
+  if (!parentId) return null;
   if (taskId && parentId === taskId) throw new AppError("A task cannot be its own parent", 400, "TASK_CYCLE");
-  const parent = await Task.findOne({ _id: parentId, userId, deletedAt: null }).select("_id parentId");
+  const parent = await Task.findOne({ _id: parentId, userId, deletedAt: null }).select("_id parentId projectId");
   if (!parent) throw new AppError("Parent task not found", 404, "PARENT_TASK_NOT_FOUND");
   if (parent.parentId) throw new AppError("Subtasks cannot be nested more than one level", 400, "TASK_DEPTH_EXCEEDED");
+  return parent;
 }
 function toUpdate(input: TaskInput) {
   const update: Record<string, unknown> = { ...input };
   if (input.projectId !== undefined) update.projectId = input.projectId ? objectId(input.projectId) : null;
   if (input.parentId !== undefined) update.parentId = input.parentId ? objectId(input.parentId) : null;
-  if (input.tagIds !== undefined) update.tagIds = input.tagIds.map(objectId);
   if (input.startAt !== undefined) update.startAt = input.startAt ? new Date(input.startAt) : null;
   if (input.dueAt !== undefined) update.dueAt = input.dueAt ? new Date(input.dueAt) : null;
   delete update.tagIds;
@@ -70,8 +70,15 @@ export async function getTask(userId: Types.ObjectId, taskId: string) {
 }
 
 export async function createTask(userId: Types.ObjectId, input: TaskInput) {
+  const parent = await getValidParent(userId, input.parentId);
+  if (parent) {
+    const inheritedProjectId = parent.projectId?.toString() ?? null;
+    if (input.projectId !== undefined && input.projectId !== inheritedProjectId) {
+      throw new AppError("A subtask must remain in its parent's project", 400, "SUBTASK_PROJECT_MISMATCH");
+    }
+    input = { ...input, projectId: inheritedProjectId };
+  }
   await assertProject(userId, input.projectId);
-  await assertParent(userId, input.parentId);
   await assertTags(userId, input.tagIds);
   const data = toUpdate(input);
   if (input.tagIds) data.tagIds = input.tagIds.map(objectId);
@@ -82,8 +89,15 @@ export async function createTask(userId: Types.ObjectId, input: TaskInput) {
 export async function updateTask(userId: Types.ObjectId, taskId: string, input: TaskInput) {
   const current = await Task.findOne({ _id: taskId, userId, deletedAt: null });
   if (!current) throw new AppError("Task not found", 404, "TASK_NOT_FOUND");
-  await assertProject(userId, input.projectId === undefined ? current.projectId?.toString() : input.projectId);
-  await assertParent(userId, input.parentId === undefined ? current.parentId?.toString() : input.parentId, taskId);
+  const parentId = input.parentId === undefined ? current.parentId?.toString() : input.parentId;
+  const parent = await getValidParent(userId, parentId, taskId);
+  if (parent) {
+    const parentProject = parent.projectId?.toString() ?? null;
+    const nextProject = input.projectId === undefined ? current.projectId?.toString() ?? null : input.projectId;
+    if (nextProject !== parentProject) throw new AppError("A subtask must remain in its parent's project", 400, "SUBTASK_PROJECT_MISMATCH");
+  }
+  const nextProject = input.projectId === undefined ? current.projectId?.toString() : input.projectId;
+  await assertProject(userId, nextProject);
   await assertTags(userId, input.tagIds);
   const data = toUpdate(input);
   if (input.tagIds) data.tagIds = input.tagIds.map(objectId);
@@ -91,6 +105,9 @@ export async function updateTask(userId: Types.ObjectId, taskId: string, input: 
   if (input.status && input.status !== "completed") data.completedAt = null;
   Object.assign(current, data);
   await current.save();
+  if (input.projectId !== undefined && !current.parentId) {
+    await Task.updateMany({ userId, parentId: current._id, deletedAt: null }, { $set: { projectId: current.projectId } });
+  }
   return current.toObject();
 }
 
@@ -113,7 +130,11 @@ export async function listSubtasks(userId: Types.ObjectId, taskId: string) {
 
 export async function setTaskProject(userId: Types.ObjectId, taskId: string, projectId: string | null) {
   await assertProject(userId, projectId);
-  const task = await Task.findOneAndUpdate({ _id: taskId, userId, deletedAt: null }, { $set: { projectId } }, { new: true });
+  const task = await Task.findOne({ _id: taskId, userId, deletedAt: null });
   if (!task) throw new AppError("Task not found", 404, "TASK_NOT_FOUND");
+  if (task.parentId) throw new AppError("Change the project on the parent task instead", 400, "SUBTASK_PROJECT_INHERITED");
+  task.projectId = projectId ? objectId(projectId) : null;
+  await task.save();
+  await Task.updateMany({ userId, parentId: task._id, deletedAt: null }, { $set: { projectId: task.projectId } });
   return task.toObject();
 }
