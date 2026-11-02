@@ -7,6 +7,9 @@ import { OverviewPage } from "../features/dashboard/OverviewPage";
 import { TasksPage } from "../features/tasks/TasksPage";
 import { ProjectsPage } from "../features/projects/ProjectsPage";
 import { DiaryPage } from "../features/diary/DiaryPage";
+import { HabitsPage } from "../features/habits/HabitsPage";
+import { TagsPage } from "../features/tags/TagsPage";
+import { CalendarPage } from "../features/calendar/CalendarPage";
 import { PlaceholderPage } from "../features/shared/PlaceholderPage";
 import { AuthPage } from "../features/auth/AuthPage";
 import { VerifyEmailPage } from "../features/auth/VerifyEmailPage";
@@ -16,114 +19,33 @@ import { authQueryKey, getCurrentUser, logout, type AuthUser } from "../features
 import { API_BASE_URL, api, ApiError } from "../lib/api-client";
 
 const navigation = [
-  { label: "Overview", path: "/", icon: LayoutDashboard },
-  { label: "My Tasks", path: "/tasks", icon: CheckSquare },
-  { label: "Projects", path: "/projects", icon: FolderKanban },
-  { label: "Diary", path: "/diary", icon: NotebookPen },
-  { label: "Habits", path: "/habits", icon: Target },
-  { label: "Calendar", path: "/calendar", icon: CalendarDays },
-  { label: "Finance", path: "/finance", icon: CircleDollarSign },
-  { label: "Analytics", path: "/analytics", icon: Activity },
+  { label: "Overview", path: "/", icon: LayoutDashboard }, { label: "My Tasks", path: "/tasks", icon: CheckSquare },
+  { label: "Projects", path: "/projects", icon: FolderKanban }, { label: "Diary", path: "/diary", icon: NotebookPen },
+  { label: "Habits", path: "/habits", icon: Target }, { label: "Calendar", path: "/calendar", icon: CalendarDays },
+  { label: "Finance", path: "/finance", icon: CircleDollarSign }, { label: "Analytics", path: "/analytics", icon: Activity },
   { label: "Tags", path: "/tags", icon: Tags }
 ];
-
-export function App() {
-  const location = useLocation();
-  if (location.pathname === "/verify-email") return <VerifyEmailPage/>;
-  if (location.pathname === "/forgot-password") return <ForgotPasswordPage/>;
-  if (location.pathname === "/reset-password") return <ResetPasswordPage/>;
+export function App(){
+  const location=useLocation();
+  if(location.pathname==="/verify-email")return <VerifyEmailPage/>;
+  if(location.pathname==="/forgot-password")return <ForgotPasswordPage/>;
+  if(location.pathname==="/reset-password")return <ResetPasswordPage/>;
   return <AuthenticatedApplication/>;
 }
-
-function AuthenticatedApplication() {
-  const location = useLocation();
-  const queryClient = useQueryClient();
-  const { theme, setTheme } = useTheme();
-  const auth = useQuery({ queryKey: authQueryKey, queryFn: getCurrentUser, retry: false, staleTime: 5 * 60 * 1000 });
-  const user = auth.data;
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [quickOpen, setQuickOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setSearchOpen(true);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  useEffect(() => {
-    if (user?.preferences?.theme) setTheme(user.preferences.theme);
-  }, [user?.id, user?.preferences?.theme, setTheme]);
-
-  const logoutMutation = useMutation({
-    mutationFn: logout,
-    onSettled: () => {
-      queryClient.removeQueries({ queryKey: authQueryKey });
-      navigate("/login", { replace: true });
-    }
-  });
-
-  async function changeTheme() {
-    const next: Theme = theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
-    setTheme(next);
-    queryClient.setQueryData<AuthUser>(authQueryKey, old => old ? { ...old, preferences: { ...old.preferences, theme: next } } : old);
-    try { await api("/users/me/preferences", { method: "PATCH", body: JSON.stringify({ theme: next }) }); }
-    catch { /* Local theme remains available when the preference endpoint is offline. */ }
-  }
-
-  if (auth.isLoading) return <div className="app-loading"><div className="brand-mark">d.</div><span>Opening your workspace…</span></div>;
-  if (auth.isError) {
-    if (auth.error instanceof ApiError && auth.error.status !== 401) {
-      return <div className="app-loading"><h2>We couldn't reach your workspace.</h2><p>{auth.error.message}</p><button className="button button-primary" onClick={() => void auth.refetch()}>Try again</button></div>;
-    }
-    return <AuthPage initialMode={location.pathname === "/register" ? "register" : "login"}/>;
-  }
-  if (!user) return <AuthPage initialMode="login"/>;
-
-  const quickItems = [
-    { label: "Task", path: "/tasks", icon: CheckSquare },
-    { label: "Subtask", path: "/tasks", icon: CheckSquare },
-    { label: "Project", path: "/projects", icon: FolderKanban },
-    { label: "Diary entry", path: "/diary", icon: NotebookPen },
-    { label: "Habit", path: "/habits", icon: Target },
-    { label: "Calendar event", path: "/calendar", icon: CalendarDays },
-    { label: "Income or expense", path: "/finance", icon: CircleDollarSign }
-  ];
-
-  const sidebar = <aside className={`sidebar ${collapsed ? "sidebar-collapsed" : ""}`}>
-    <div className="brand-row"><div className="brand-mark">d.</div>{!collapsed && <div><strong>daymark</strong><span>PERSONAL WORKSPACE</span></div>}<button className="icon-button sidebar-collapse" aria-label="Collapse sidebar" onClick={() => setCollapsed(!collapsed)}><ChevronLeft size={17}/></button></div>
-    <div className="workspace-switch"><span className="workspace-avatar">{user.name.slice(0, 1).toUpperCase()}</span>{!collapsed && <><span>My workspace</span><span className="muted">⌄</span></>}</div>
-    <div className="nav-caption">{!collapsed && "WORKSPACE"}</div>
-    <nav className="nav-list">{navigation.map(({ label, path, icon: Icon }) => <NavLink key={path} to={path} end={path === "/"} title={collapsed ? label : undefined} onClick={() => setMobileOpen(false)} className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}><Icon size={18}/>{!collapsed && <span>{label}</span>}</NavLink>)}</nav>
-    <div className="sidebar-bottom"><NavLink to="/settings" className="nav-link"><Settings2 size={18}/>{!collapsed && <span>Settings</span>}</NavLink><div className="profile-card"><div className="profile-avatar">{user.name.split(/\s+/).map(part => part[0]).slice(0, 2).join("").toUpperCase()}</div>{!collapsed && <div className="profile-copy"><strong>{user.name}</strong><span>{user.email}</span></div>}<button className="icon-button" onClick={() => logoutMutation.mutate()} disabled={logoutMutation.isPending} title="Log out" aria-label="Log out"><LogOut size={16}/></button></div></div>
-  </aside>;
-
-  return <div className="app-shell">
-    {mobileOpen && <button className="mobile-scrim" aria-label="Close navigation" onClick={() => setMobileOpen(false)}/>}
-    <div className={`sidebar-wrap ${mobileOpen ? "mobile-open" : ""}`}>{sidebar}</div>
-    <main className="main-shell">
-      <header className="topbar"><button className="icon-button mobile-menu" aria-label="Open menu" onClick={() => setMobileOpen(true)}><Menu size={19}/></button><div className="breadcrumbs"><span>Workspace</span><span className="crumb-divider">/</span><strong>Personal</strong></div><div className="topbar-actions"><button className="search-trigger" onClick={() => setSearchOpen(true)}><Search size={16}/><span>Search anything...</span><kbd>⌘ K</kbd></button><button className="button button-primary button-small" onClick={() => setQuickOpen(true)}><Plus size={16}/> New</button><button className="icon-button theme-top" onClick={() => void changeTheme()} aria-label="Cycle theme">{theme === "dark" ? <Moon size={17}/> : theme === "light" ? <Sun size={17}/> : <Monitor size={17}/>}</button></div></header>
-      <div className="page-content"><Routes>
-        <Route path="/" element={<OverviewPage onQuickCreate={() => setQuickOpen(true)}/>}/>
-        <Route path="/tasks" element={<TasksPage/>}/>
-        <Route path="/projects" element={<ProjectsPage/>}/>
-        <Route path="/diary" element={<DiaryPage/>}/>
-        <Route path="/habits" element={<PlaceholderPage title="Habits" eyebrow="PERSONAL GROWTH" description="Build consistency with routines and a clear view of your progress."/>}/>
-        <Route path="/calendar" element={<PlaceholderPage title="Calendar" eyebrow="YOUR TIME" description="Bring tasks, deadlines, habits, and personal events into one calendar."/>}/>
-        <Route path="/finance" element={<PlaceholderPage title="Finance" eyebrow="MONEY, MADE CLEAR" description="Keep income, spending, and budgets connected to the projects they support."/>}/>
-        <Route path="/analytics" element={<PlaceholderPage title="Analytics" eyebrow="YOUR MOMENTUM" description="Understand your focus, consistency, and progress over time."/>}/>
-        <Route path="/tags" element={<PlaceholderPage title="Tags" eyebrow="ORGANIZATION" description="Create a flexible taxonomy across your workspace."/>}/>
-        <Route path="/settings" element={<PlaceholderPage title="Settings" eyebrow="PREFERENCES" description="Shape your workspace around the way you work."/>}/>
-      </Routes></div>
-    </main>
-    {quickOpen && <div className="modal-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setQuickOpen(false); }}><div className="quick-modal"><div className="modal-heading"><div><span className="eyebrow">QUICK CREATE</span><h2>What would you like to add?</h2></div><button className="icon-button" onClick={() => setQuickOpen(false)} aria-label="Close"><X size={18}/></button></div>{quickItems.map(({ label, path, icon: Icon }) => <button className="quick-option" key={label} onClick={() => { setQuickOpen(false); navigate(path); }}><Icon size={18}/><span>{label}</span><Plus size={15}/></button>)}</div></div>}
-    {searchOpen && <GlobalSearch onClose={()=>setSearchOpen(false)} onNavigate={navigate}/>}
-  </div>;
+function AuthenticatedApplication(){
+  const location=useLocation();const queryClient=useQueryClient();const{theme,setTheme}=useTheme();
+  const auth=useQuery({queryKey:authQueryKey,queryFn:getCurrentUser,retry:false,staleTime:5*60*1000});
+  const user=auth.data;const[collapsed,setCollapsed]=useState(false);const[mobileOpen,setMobileOpen]=useState(false);const[quickOpen,setQuickOpen]=useState(false);const[searchOpen,setSearchOpen]=useState(false);const navigate=useNavigate();
+  useEffect(()=>{const onKeyDown=(event:KeyboardEvent)=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==="k"){event.preventDefault();setSearchOpen(true);}};window.addEventListener("keydown",onKeyDown);return()=>window.removeEventListener("keydown",onKeyDown);},[]);
+  useEffect(()=>{if(user?.preferences?.theme)setTheme(user.preferences.theme);},[user?.id,user?.preferences?.theme,setTheme]);
+  const logoutMutation=useMutation({mutationFn:logout,onSettled:()=>{queryClient.removeQueries({queryKey:authQueryKey});navigate("/login",{replace:true});}});
+  async function changeTheme(){const next:Theme=theme==="light"?"dark":theme==="dark"?"system":"light";setTheme(next);queryClient.setQueryData<AuthUser>(authQueryKey,old=>old?{...old,preferences:{...old.preferences,theme:next}}:old);try{await api("/users/me/preferences",{method:"PATCH",body:JSON.stringify({theme:next})});}catch{/* Preserve the local theme. */}}
+  if(auth.isLoading)return <div className="app-loading"><div className="brand-mark">d.</div><span>Opening your workspace…</span></div>;
+  if(auth.isError){if(auth.error instanceof ApiError&&auth.error.status!==401)return <div className="app-loading"><h2>We couldn't reach your workspace.</h2><p>{auth.error.message}</p><button className="button button-primary" onClick={()=>void auth.refetch()}>Try again</button></div>;return <AuthPage initialMode={location.pathname==="/register"?"register":"login"/>;}
+  if(!user)return <AuthPage initialMode="login"/>;
+  const quickItems=[{label:"Task",path:"/tasks",icon:CheckSquare},{label:"Subtask",path:"/tasks",icon:CheckSquare},{label:"Project",path:"/projects",icon:FolderKanban},{label:"Diary entry",path:"/diary",icon:NotebookPen},{label:"Habit",path:"/habits",icon:Target},{label:"Calendar event",path:"/calendar",icon:CalendarDays},{label:"Income or expense",path:"/finance",icon:CircleDollarSign}];
+  const sidebar=<aside className={`sidebar ${collapsed?"sidebar-collapsed":""}`}><div className="brand-row"><div className="brand-mark">d.</div>{!collapsed&&<div><strong>daymark</strong><span>PERSONAL WORKSPACE</span></div>}<button className="icon-button sidebar-collapse" aria-label="Collapse sidebar" onClick={()=>setCollapsed(!collapsed)}><ChevronLeft size={17}/></button></div><div className="workspace-switch"><span className="workspace-avatar">{user.name.slice(0,1).toUpperCase()}</span>{!collapsed&&<><span>My workspace</span><span className="muted">⌄</span></>}</div><div className="nav-caption">{!collapsed&&"WORKSPACE"}</div><nav className="nav-list">{navigation.map(({label,path,icon:Icon})=><NavLink key={path} to={path} end={path==="/"} title={collapsed?label:undefined} onClick={()=>setMobileOpen(false)} className={({isActive})=>`nav-link ${isActive?"active":""}`}><Icon size={18}/>{!collapsed&&<span>{label}</span>}</NavLink>)}</nav><div className="sidebar-bottom"><NavLink to="/settings" className="nav-link"><Settings2 size={18}/>{!collapsed&&<span>Settings</span>}</NavLink><div className="profile-card"><div className="profile-avatar">{user.name.split(/\s+/).map(part=>part[0]).slice(0,2).join("").toUpperCase()}</div>{!collapsed&&<div className="profile-copy"><strong>{user.name}</strong><span>{user.email}</span></div>}<button className="icon-button" onClick={()=>logoutMutation.mutate()} disabled={logoutMutation.isPending} title="Log out" aria-label="Log out"><LogOut size={16}/></button></div></div></aside>;
+  return <div className="app-shell">{mobileOpen&&<button className="mobile-scrim" aria-label="Close navigation" onClick={()=>setMobileOpen(false)}/>}<div className={`sidebar-wrap ${mobileOpen?"mobile-open":""}`}>{sidebar}</div><main className="main-shell"><header className="topbar"><button className="icon-button mobile-menu" aria-label="Open menu" onClick={()=>setMobileOpen(true)}><Menu size={19}/></button><div className="breadcrumbs"><span>Workspace</span><span>/</span><strong>Personal</strong></div><div className="topbar-actions"><button className="search-trigger" onClick={()=>setSearchOpen(true)}><Search size={16}/><span>Search anything...</span><kbd>⌘ K</kbd></button><button className="button button-primary button-small" onClick={()=>setQuickOpen(true)}><Plus size={16}/> New</button><button className="icon-button theme-top" onClick={()=>void changeTheme()} aria-label="Cycle theme">{theme==="dark"?<Moon size={17}/>:theme==="light"?<Sun size={17}/>:<Monitor size={17}/>}</button></div></header><div className="page-content"><Routes><Route path="/" element={<OverviewPage onQuickCreate={()=>setQuickOpen(true)}/>}/><Route path="/tasks" element={<TasksPage/>}/><Route path="/projects" element={<ProjectsPage/>}/><Route path="/diary" element={<DiaryPage/>}/><Route path="/habits" element={<HabitsPage/>}/><Route path="/tags" element={<TagsPage/>}/><Route path="/calendar" element={<CalendarPage/>}/><Route path="/finance" element={<PlaceholderPage title="Finance" eyebrow="MONEY, MADE CLEAR" description="Keep income, spending, and budgets connected to the projects they support."/>}/><Route path="/analytics" element={<PlaceholderPage title="Analytics" eyebrow="YOUR MOMENTUM" description="Understand your focus, consistency, and progress over time."/>}/><Route path="/settings" element={<PlaceholderPage title="Settings" eyebrow="PREFERENCES" description="Shape your workspace around the way you work."/>}/></Routes></div></main>
+    {quickOpen&&<div className="modal-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setQuickOpen(false);}}><div className="quick-modal"><div className="modal-heading"><div><span className="eyebrow">QUICK CREATE</span><h2>What would you like to add?</h2></div><button className="icon-button" onClick={()=>setQuickOpen(false)} aria-label="Close"><X size={18}/></button></div>{quickItems.map(({label,path,icon:Icon})=><button className="quick-option" key={label} onClick={()=>{setQuickOpen(false);navigate(path);}}><Icon size={18}/><span>{label}</span><Plus size={15}/></button>)}</div></div>}
+    {searchOpen&&<GlobalSearch onClose={()=>setSearchOpen(false)} onNavigate={navigate}/>}</div>;
 }
