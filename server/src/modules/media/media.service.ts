@@ -67,7 +67,7 @@ export async function createUploadSignature(userId: Types.ObjectId, input: { par
   };
 }
 
-export async function confirmUpload(userId: Types.ObjectId, input: { mediaId: string; altText?: string; caption?: string }) {
+export async function confirmUpload(userId: Types.ObjectId, input: { mediaId: string; publicId: string; altText?: string; caption?: string }) {
   ensureCloudinary();
   const pending = await MediaAsset.findOne({ _id: input.mediaId, userId });
   if (!pending) throw new AppError("Upload authorization not found", 404, "MEDIA_NOT_FOUND");
@@ -81,7 +81,7 @@ export async function confirmUpload(userId: Types.ObjectId, input: { mediaId: st
     throw new AppError("Uploaded asset could not be verified", 400, "UPLOAD_VERIFICATION_FAILED");
   }
   if (!FORMATS.has(String(uploaded.format).toLowerCase()) || Number(uploaded.bytes) > MAX_BYTES) {
-    await cloudinary.uploader.destroy(pending.publicId, { resource_type: "image", invalidate: true });
+    await cloudinary.uploader.destroy(input.publicId, { resource_type: "image", invalidate: true });
     await MediaAsset.deleteOne({ _id: pending._id, userId });
     throw new AppError("Image format or file size is not allowed", 400, "INVALID_IMAGE");
   }
@@ -89,7 +89,7 @@ export async function confirmUpload(userId: Types.ObjectId, input: { mediaId: st
   const attached = await MediaAsset.findOneAndUpdate(
     { _id: pending._id, userId, status: "pending", expiresAt: { $gt: new Date() } },
     { $set: {
-      status: "attached", assetId: uploaded.asset_id, secureUrl: uploaded.secure_url,
+      status: "attached", assetId: uploaded.asset_id, publicId: uploaded.public_id, secureUrl: uploaded.secure_url,
       resourceType: "image", format: uploaded.format, width: uploaded.width, height: uploaded.height,
       bytes: uploaded.bytes, altText: input.altText ?? "", caption: input.caption ?? "", expiresAt: null
     } },
