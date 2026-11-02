@@ -84,7 +84,7 @@ export async function completeGoogleOAuth(req: Request, res: Response, code: str
     user.emailVerifiedAt ??= new Date();
     if (!user.avatarUrl && payload.picture) user.avatarUrl = payload.picture;
     await user.save();
-    return redirectClient("/settings/account?google=linked");
+    return redirectClient("/settings?google=linked");
   }
 
   let user = await User.findOne({ googleSub: payload.sub });
