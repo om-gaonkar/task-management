@@ -1,0 +1,10 @@
+import {Router} from "express";
+import {validateBody} from "../../shared/middleware/validate.js";
+import * as controller from "./calendar.controller.js";
+import {createCalendarEventSchema,updateCalendarEventSchema} from "./calendar.validation.js";
+const router=Router();
+router.get("/events",controller.list);
+router.post("/events",validateBody(createCalendarEventSchema),controller.create);
+router.patch("/events/:eventId",validateBody(updateCalendarEventSchema),controller.update);
+router.delete("/events/:eventId",controller.remove);
+export default router;
