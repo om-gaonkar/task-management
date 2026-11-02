@@ -1,0 +1,12 @@
+import {Router} from "express";
+import {validateBody} from "../../shared/middleware/validate.js";
+import * as controller from "./diary.controller.js";
+import {createDiarySchema,updateDiarySchema} from "./diary.validation.js";
+const router=Router();
+router.get("/calendar",controller.calendar);
+router.get("/entries",controller.list);
+router.post("/entries",validateBody(createDiarySchema),controller.create);
+router.get("/entries/:entryId",controller.get);
+router.patch("/entries/:entryId",validateBody(updateDiarySchema),controller.update);
+router.delete("/entries/:entryId",controller.remove);
+export default router;
