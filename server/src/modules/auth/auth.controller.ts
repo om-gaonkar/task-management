@@ -31,7 +31,7 @@ export async function sessions(req: Request, res: Response, next: NextFunction) 
   try { res.json({ data: await service.listSessions(req.auth!.userId, req.auth!.sessionId) }); } catch (error) { next(error); }
 }
 export async function revokeSession(req: Request, res: Response, next: NextFunction) {
-  try { await service.revokeSession(req.auth!.userId, req.params.sessionId!); res.status(204).send(); } catch (error) { next(error); }
+  try { await service.revokeSession(req.auth!.userId, String(req.params.sessionId)); res.status(204).send(); } catch (error) { next(error); }
 }
 export async function logoutAll(req: Request, res: Response, next: NextFunction) {
   try { await service.revokeAllSessions(req.auth!.userId); service.clearSessionCookies(res); res.status(204).send(); } catch (error) { next(error); }
