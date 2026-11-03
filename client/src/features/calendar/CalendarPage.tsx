@@ -14,7 +14,7 @@ type CalendarEvent={id:string;sourceType:string;title:string;start:string;end?:s
 type CalendarResponse={data:CalendarEvent[]};
 type Range={start:string;end:string};
 type PickedEvent={title:string;sourceType:string;start:string};
-const colors:Record<string,string>={task:"#6686a3","project-deadline":"#b77d6e",diary:"#927eb1",habit:"#70987b",personal:"#bd9659"};
+const colors:Record<string,string>={task:"#6686a3","project-deadline":"#b77d6e",diary:"#927eb1",habit:"#9a83e8",personal:"#bd9659"};
 export function CalendarPage(){
  const[range,setRange]=useState<Range|null>(null);const[selected,setSelected]=useState<PickedEvent|null>(null);const[showCreate,setShowCreate]=useState(false);const[draft,setDraft]=useState({title:"",description:"",startAt:format(new Date(),"yyyy-MM-dd'T'HH:mm"),endAt:""});const[searchParams,setSearchParams]=useSearchParams();
  useEffect(()=>{if(searchParams.get("create")!=="1")return;setDraft({title:"",description:"",startAt:format(new Date(),"yyyy-MM-dd'T'HH:mm"),endAt:""});setShowCreate(true);const nextParams=new URLSearchParams(searchParams);nextParams.delete("create");setSearchParams(nextParams,{replace:true});},[searchParams,setSearchParams]);
