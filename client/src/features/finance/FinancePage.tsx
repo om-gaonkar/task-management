@@ -14,7 +14,7 @@ type SummaryResponse={data:Summary[]};
 type Budget={_id:string;currency:string;amountMinor:number;spentMinor:string;remainingMinor:string;usagePercent:number;categoryId:string|null};
 type BudgetsResponse={data:Budget[]};
 
-function digits(currency:string){return new Intl.NumberFormat("en",{style:"currency",currency}).resolvedOptions().maximumFractionDigits;}
+function digits(currency:string):number{return new Intl.NumberFormat("en",{style:"currency",currency}).resolvedOptions().maximumFractionDigits??2;}
 function parseMinor(value:string,currency:string){
   const places=digits(currency);const match=value.trim().match(/^(\d+)(?:\.(\d*))?$/);if(!match)return null;
   const fraction=(match[2]??"").padEnd(places,"0");if(fraction.length>places)return null;
