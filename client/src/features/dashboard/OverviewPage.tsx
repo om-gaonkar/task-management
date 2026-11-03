@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Activity, ArrowUpRight, Check, ChevronRight, CircleDollarSign, Clock3, FolderKanban, NotebookPen, Plus, Sparkles, Target, TrendingUp } from "lucide-react";
+import { Activity, ArrowUpRight, Check, ChevronRight, CircleDollarSign, Clock3, FolderKanban, NotebookPen, Plus, Sparkles, Target } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api-client";
 
