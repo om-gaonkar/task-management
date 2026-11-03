@@ -9,7 +9,7 @@ type MediaItem={_id:string;secureUrl:string;format:string;width:number;height:nu
 type MediaResponse={data:MediaItem[]};
 
 function uploadToCloudinary(file:File,signature:Signature,onProgress:(value:number)=>void){
- return new Promise<void>((resolve,reject)=>{
+ return new Promise<string>((resolve,reject)=>{
   const data=new FormData();data.append("file",file);data.append("api_key",signature.apiKey);data.append("timestamp",String(signature.timestamp));data.append("signature",signature.signature);data.append("folder",signature.folder);data.append("public_id",signature.publicId);data.append("overwrite",String(signature.overwrite));data.append("allowed_formats",signature.allowedFormats);
   const xhr=new XMLHttpRequest();xhr.open("POST",signature.uploadUrl);xhr.timeout=90_000;
   xhr.upload.onprogress=event=>{if(event.lengthComputable)onProgress(Math.round(event.loaded/event.total*100));};
