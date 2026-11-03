@@ -31,7 +31,6 @@ export function FinancePage(){
   const defaultCurrency=currentUser?.preferences?.currency??"INR";
   const [searchParams,setSearchParams]=useSearchParams();
   const [exportError,setExportError]=useState<string|null>(null);
-  useEffect(()=>{if(searchParams.get("create")!=="1")return;setShowForm(true);const nextParams=new URLSearchParams(searchParams);nextParams.delete("create");setSearchParams(nextParams,{replace:true});},[searchParams,setSearchParams]);
   const [month,setMonth]=useState(startOfMonth(new Date()));
   const [showForm,setShowForm]=useState(false);
   const [type,setType]=useState<"income"|"expense">("expense");
@@ -42,6 +41,7 @@ export function FinancePage(){
   const [note,setNote]=useState("");
   const [budgetAmount,setBudgetAmount]=useState("");
   const [showBudget,setShowBudget]=useState(false);
+  useEffect(()=>{if(searchParams.get("create")!=="1")return;setShowForm(true);const nextParams=new URLSearchParams(searchParams);nextParams.delete("create");setSearchParams(nextParams,{replace:true});},[searchParams,setSearchParams]);
   const monthKey=format(month,"yyyy-MM");
   const start=startOfMonth(month);const end=addMonths(start,1);
   const rangeQuery=`from=${encodeURIComponent(start.toISOString())}&to=${encodeURIComponent(end.toISOString())}`;
