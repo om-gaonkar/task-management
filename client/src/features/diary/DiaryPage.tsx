@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { addDays, endOfDay, format, startOfDay } from "date-fns";
 import { CalendarDays, ChevronLeft, ChevronRight, Feather, Plus, Save } from "lucide-react";
-import { api, ApiError } from "../../lib/api-client";\nimport { MediaGallery } from "../media/MediaGallery";
+import { api, ApiError } from "../../lib/api-client";
+import { MediaGallery } from "../media/MediaGallery";
 
 type DiaryEntry={_id:string;title:string;content:unknown;entryDate:string;timezone:string;version:number;createdAt:string;updatedAt:string};
 type DiaryListResponse={data:{items:DiaryEntry[];total:number}};
