@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight, Plus } from "lucide-react";
 import { api } from "../../lib/api-client";
@@ -9,6 +10,14 @@ type ProjectResponse = { data: { items: Project[]; total: number } };
 
 export function ProjectsPage() {
   const [creating, setCreating] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    if (searchParams.get("create") !== "1") return;
+    setCreating(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("create");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [name, setName] = useState("");
   const queryClient = useQueryClient();
   const projectsQuery = useQuery({ queryKey: ["projects"], queryFn: () => api<ProjectResponse>("/projects?page=1&limit=50") });
