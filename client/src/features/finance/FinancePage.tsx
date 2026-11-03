@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDownLeft, ArrowUpRight, Download, Plus, Wallet } from "lucide-react";
 import { addMonths, format, startOfMonth } from "date-fns";
@@ -25,8 +26,12 @@ function money(minor:string|number,currency:string){
   const places=digits(currency);return new Intl.NumberFormat("en-IN",{style:"currency",currency,maximumFractionDigits:places}).format(Number(minor)/10**places);
 }
 export function FinancePage(){
-  const currentUser=useQuery({queryKey:authQueryKey,queryFn:async()=>null as AuthUser|null,enabled:false}).data;
+  const client=useQueryClient();
+  const currentUser=client.getQueryData<AuthUser>(authQueryKey);
   const defaultCurrency=currentUser?.preferences?.currency??"INR";
+  const [searchParams,setSearchParams]=useSearchParams();
+  const [exportError,setExportError]=useState<string|null>(null);
+  useEffect(()=>{if(searchParams.get("create")!=="1")return;setShowForm(true);const nextParams=new URLSearchParams(searchParams);nextParams.delete("create");setSearchParams(nextParams,{replace:true});},[searchParams,setSearchParams]);
   const [month,setMonth]=useState(startOfMonth(new Date()));
   const [showForm,setShowForm]=useState(false);
   const [type,setType]=useState<"income"|"expense">("expense");
@@ -37,7 +42,6 @@ export function FinancePage(){
   const [note,setNote]=useState("");
   const [budgetAmount,setBudgetAmount]=useState("");
   const [showBudget,setShowBudget]=useState(false);
-  const client=useQueryClient();
   const monthKey=format(month,"yyyy-MM");
   const start=startOfMonth(month);const end=addMonths(start,1);
   const rangeQuery=`from=${encodeURIComponent(start.toISOString())}&to=${encodeURIComponent(end.toISOString())}`;
@@ -60,10 +64,11 @@ export function FinancePage(){
   async function exportCsv(){
     const response=await fetch(`${API_BASE_URL}/finance/export?${rangeQuery}`,{credentials:"include"});
     if(!response.ok)throw new Error("Could not export transactions");
-    const blob=await response.blob();const url=URL.createObjectURL(blob);const anchor=document.createElement("a");anchor.href=url;anchor.download=`daymark-transactions-${monthKey}.csv`;anchor.click();URL.revokeObjectURL(url);
+    const blob=await response.blob();const url=URL.createObjectURL(blob);const anchor=document.createElement("a");anchor.href=url;anchor.download=`daymark-transactions-${monthKey}.csv`;document.body.appendChild(anchor);anchor.click();anchor.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
   return <div className="feature-page finance-page">
-    <div className="feature-heading"><div><span className="eyebrow">MONEY, MADE CLEAR</span><h1>Finance<span className="heading-period">.</span></h1><p className="page-subtitle">Understand where your money comes from and where it goes.</p></div><div className="finance-actions"><button className="button button-secondary" onClick={()=>void exportCsv()}><Download size={15}/> Export CSV</button><button className="button button-primary" onClick={()=>setShowForm(!showForm)}><Plus size={15}/> Add transaction</button></div></div>
+    <div className="feature-heading"><div><span className="eyebrow">MONEY, MADE CLEAR</span><h1>Finance<span className="heading-period">.</span></h1><p className="page-subtitle">Understand where your money comes from and where it goes.</p></div><div className="finance-actions"><button className="button button-secondary" onClick={()=>{setExportError(null);void exportCsv().catch(error=>setExportError(error instanceof Error?error.message:"Could not export transactions."));}}><Download size={15}/> Export CSV</button><button className="button button-primary" onClick={()=>setShowForm(!showForm)}><Plus size={15}/> Add transaction</button></div></div>
+    {exportError&&<p className="form-error">{exportError}</p>}
     <div className="month-switcher"><button className="icon-button" onClick={()=>setMonth(value=>addMonths(value,-1))}>‹</button><strong>{format(month,"MMMM yyyy")}</strong><button className="icon-button" onClick={()=>setMonth(value=>addMonths(value,1))}>›</button><span className="eyebrow">CURRENCY</span><select value={currency} onChange={event=>setCurrency(event.target.value)}><option value="INR">INR ₹</option><option value="USD">USD $</option><option value="EUR">EUR €</option><option value="GBP">GBP £</option></select></div>
     <div className="finance-metrics"><article className="surface-card"><span>Income</span><strong>{money(currencySummary?.incomeMinor??"0",currencySummary?.currency??currency)}</strong><ArrowDownLeft size={17}/></article><article className="surface-card"><span>Expenses</span><strong>{money(currencySummary?.expenseMinor??"0",currencySummary?.currency??currency)}</strong><ArrowUpRight size={17}/></article><article className="surface-card"><span>Net cash flow</span><strong>{money(currencySummary?.netMinor??"0",currencySummary?.currency??currency)}</strong><Wallet size={17}/></article></div>
     <div className="finance-grid"><section className="surface-card"><div className="section-heading"><div><span className="eyebrow">TRANSACTION HISTORY</span><h2>Recent activity</h2></div></div>{transactions.isLoading?<div className="empty-state">Loading transactions…</div>:transactions.isError?<div className="empty-state"><span>{transactions.error.message}</span><button className="button button-secondary button-small" onClick={()=>void transactions.refetch()}>Retry</button></div>:transactionList.length===0?<div className="empty-state"><strong>No transactions for this month.</strong><span>Record income or spending to start your report.</span></div>:<div className="transaction-list">{transactionList.map(item=><div className="transaction-row" key={item._id}><span className={`transaction-type-icon ${item.type}`}>{item.type==="income"?<ArrowDownLeft size={16}/>:<ArrowUpRight size={16}/>}</span><div className="transaction-copy"><strong>{item.note||item.categoryName}</strong><span>{item.categoryName} · {format(new Date(item.occurredAt),"dd MMM yyyy")}</span></div><strong className={item.type==="income"?"income-value":"expense-value"}>{item.type==="income"?"+":"−"}{money(item.amountMinor,item.currency)}</strong></div>)}</div>}</section>
