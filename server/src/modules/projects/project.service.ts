@@ -9,7 +9,8 @@ async function assertTags(userId: Types.ObjectId, tagIds: string[] = []) {
   const count = await Tag.countDocuments({ _id: { $in: tagIds }, userId });
   if (count !== new Set(tagIds).size) throw new AppError("One or more tags are invalid", 400, "INVALID_TAGS");
 }
-type ProjectProgressTask = { _id: Types.ObjectId; projectId?: Types.ObjectId | null; parentId?: Types.ObjectId | null; status: string; dueAt?: Date | null };\nfunction progressByProject(projects: Array<{ _id: Types.ObjectId }>, tasks: ProjectProgressTask[]) {
+type ProjectProgressTask = { _id: Types.ObjectId; projectId?: Types.ObjectId | null; parentId?: Types.ObjectId | null; status: string; dueAt?: Date | null };
+function progressByProject(projects: Array<{ _id: Types.ObjectId }>, tasks: ProjectProgressTask[]) {
   const parentIds = new Set(tasks.map(task => task.parentId?.toString()).filter(Boolean));
   const now = new Date();
   return projects.map(project => {
