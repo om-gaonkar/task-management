@@ -7,5 +7,5 @@ export async function confirm(req:Request,res:Response,next:NextFunction){try{re
 export async function listForParent(req:Request,res:Response,next:NextFunction){
  try{const query=z.object({parentType:z.enum(["task","project","diary"]),parentId:z.string().regex(/^[a-f\d]{24}$/i)}).parse(req.query);res.json({data:await service.listParentAttachments(owner(req),query.parentType,query.parentId)});}catch(error){next(error);}
 }
-export async function get(req:Request,res:Response,next:NextFunction){try{res.json({data:await service.listAttachment(owner(req),req.params.mediaId!)});}catch(error){next(error);}}
-export async function remove(req:Request,res:Response,next:NextFunction){try{const result=await service.deleteAttachment(owner(req),req.params.mediaId!);res.status(result.deleted?204:202).json(result);}catch(error){next(error);}}
+export async function get(req:Request,res:Response,next:NextFunction){try{res.json({data:await service.listAttachment(owner(req),String(req.params.mediaId))});}catch(error){next(error);}}
+export async function remove(req:Request,res:Response,next:NextFunction){try{const result=await service.deleteAttachment(owner(req),String(req.params.mediaId));res.status(result.deleted?204:202).json(result);}catch(error){next(error);}}
