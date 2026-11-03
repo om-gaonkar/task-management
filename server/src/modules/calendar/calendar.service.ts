@@ -62,11 +62,17 @@ export async function createPersonalEvent(userId: Types.ObjectId, input: Record<
   return (await CalendarEvent.create({ ...input, userId, startAt: new Date(input.startAt), endAt: input.endAt ? new Date(input.endAt) : null })).toObject();
 }
 export async function updatePersonalEvent(userId: Types.ObjectId, eventId: string, input: Record<string, any>) {
-  const update = { ...input };
-  if (input.startAt) update.startAt = new Date(input.startAt);
-  if (input.endAt !== undefined) update.endAt = input.endAt ? new Date(input.endAt) : null;
-  const event = await CalendarEvent.findOneAndUpdate({ _id: eventId, userId }, { $set: update }, { new: true, runValidators: true });
+  const event = await CalendarEvent.findOne({ _id: eventId, userId });
   if (!event) throw new AppError("Calendar event not found", 404, "CALENDAR_EVENT_NOT_FOUND");
+
+  const startAt = input.startAt !== undefined ? new Date(input.startAt) : event.startAt;
+  const endAt = input.endAt !== undefined ? (input.endAt ? new Date(input.endAt) : null) : event.endAt;
+  if (endAt && endAt < startAt) {
+    throw new AppError("End must be after start", 400, "INVALID_EVENT_RANGE");
+  }
+
+  Object.assign(event, input, { startAt, endAt });
+  await event.save();
   return event.toObject();
 }
 export async function deletePersonalEvent(userId: Types.ObjectId, eventId: string) {
