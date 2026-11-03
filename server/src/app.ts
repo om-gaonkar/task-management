@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
-import pinoHttp from "pino-http";
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
 import authRoutes from "./modules/auth/auth.routes.js";
@@ -34,18 +33,18 @@ export function createApp() {
   }));
   app.use(express.json({ limit: "1mb" }));
   app.use(cookieParser());
-  app.use(pinoHttp({
-    logger,
-    serializers: {
-      req(request) {
-        return {
-          method: request.method,
-          url: (request.url ?? "").split("?")[0],
-          remoteAddress: request.socket?.remoteAddress
-        };
-      }
-    }
-  }));
+  app.use((req, res, next) => {
+    const startedAt = Date.now();
+    res.on("finish", () => {
+      logger.info({
+        method: req.method,
+        path: req.path,
+        statusCode: res.statusCode,
+        durationMs: Date.now() - startedAt
+      }, "HTTP request");
+    });
+    next();
+  });
   app.get("/health", (_req, res) => res.json({ status: "ok" }));
   app.use("/api/v1/auth", authRoutes);
   app.use("/api/v1/users", requireAuth, userRoutes);
