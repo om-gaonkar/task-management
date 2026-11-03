@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -15,7 +16,8 @@ type Range={start:string;end:string};
 type PickedEvent={title:string;sourceType:string;start:string};
 const colors:Record<string,string>={task:"#6686a3","project-deadline":"#b77d6e",diary:"#927eb1",habit:"#70987b",personal:"#bd9659"};
 export function CalendarPage(){
- const[range,setRange]=useState<Range|null>(null);const[selected,setSelected]=useState<PickedEvent|null>(null);const[showCreate,setShowCreate]=useState(false);const[draft,setDraft]=useState({title:"",description:"",startAt:"",endAt:""});
+ const[range,setRange]=useState<Range|null>(null);const[selected,setSelected]=useState<PickedEvent|null>(null);const[showCreate,setShowCreate]=useState(false);const[draft,setDraft]=useState({title:"",description:"",startAt:format(new Date(),"yyyy-MM-dd'T'HH:mm"),endAt:""});const[searchParams,setSearchParams]=useSearchParams();
+ useEffect(()=>{if(searchParams.get("create")!=="1")return;setDraft({title:"",description:"",startAt:format(new Date(),"yyyy-MM-dd'T'HH:mm"),endAt:""});setShowCreate(true);const nextParams=new URLSearchParams(searchParams);nextParams.delete("create");setSearchParams(nextParams,{replace:true});},[searchParams,setSearchParams]);
  const client=useQueryClient();
  const eventsQuery=useQuery({queryKey:["calendar","events",range],queryFn:()=>api<CalendarResponse>(`/calendar/events?start=${encodeURIComponent(range!.start)}&end=${encodeURIComponent(range!.end)}`),enabled:Boolean(range)});
  const create=useMutation({mutationFn:()=>api("/calendar/events",{method:"POST",body:JSON.stringify({title:draft.title.trim(),description:draft.description,startAt:new Date(draft.startAt).toISOString(),endAt:draft.endAt?new Date(draft.endAt).toISOString():null,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||"Asia/Kolkata"})}),onSuccess:()=>{setShowCreate(false);setDraft({title:"",description:"",startAt:"",endAt:""});void client.invalidateQueries({queryKey:["calendar","events"]});}});
