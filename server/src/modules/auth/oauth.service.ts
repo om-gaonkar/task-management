@@ -46,7 +46,7 @@ export function beginGoogleOAuth(res: Response, mode: "login" | "link") {
     scope: ["openid", "email", "profile"],
     state,
     code_challenge: challenge,
-    code_challenge_method: "S256"
+    code_challenge_method: "S256" as never
   });
   res.redirect(url);
 }
@@ -63,7 +63,11 @@ export async function completeGoogleOAuth(req: Request, res: Response, code: str
   const client = oauthClient();
   const { tokens } = await client.getToken({ code, codeVerifier: verifier });
   if (!tokens.id_token) throw new AppError("Google identity token is missing", 401, "GOOGLE_ID_TOKEN_MISSING");
-  const ticket = await client.verifyIdToken({ idToken: tokens.id_token, audience: env.GOOGLE_CLIENT_ID });
+  const ticket = await client.verifyIdToken({ idToken: tokens.id_token, audience: env.GOOGLE_CLIENT_ID! }) as unknown as {
+    getPayload: () => {
+      sub?: string; email?: string; email_verified?: boolean; iss?: string; name?: string; picture?: string;
+    } | undefined;
+  };
   const payload = ticket.getPayload();
   if (!payload || !payload.sub || !payload.email || payload.email_verified !== true) {
     throw new AppError("Google did not provide a verified email identity", 401, "GOOGLE_IDENTITY_UNVERIFIED");
