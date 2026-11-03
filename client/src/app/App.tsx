@@ -18,7 +18,7 @@ import { VerifyEmailPage } from "../features/auth/VerifyEmailPage";
 import { ForgotPasswordPage, ResetPasswordPage } from "../features/auth/PasswordPages";
 import { GlobalSearch } from "../features/search/GlobalSearch";
 import { authQueryKey, getCurrentUser, logout, type AuthUser } from "../features/auth/auth.api";
-import { API_BASE_URL, api, ApiError } from "../lib/api-client";
+import { api, ApiError } from "../lib/api-client";
 const navigation=[{label:"Overview",path:"/",icon:LayoutDashboard},{label:"My Tasks",path:"/tasks",icon:CheckSquare},{label:"Projects",path:"/projects",icon:FolderKanban},{label:"Diary",path:"/diary",icon:NotebookPen},{label:"Habits",path:"/habits",icon:Target},{label:"Calendar",path:"/calendar",icon:CalendarDays},{label:"Finance",path:"/finance",icon:CircleDollarSign},{label:"Analytics",path:"/analytics",icon:Activity},{label:"Tags",path:"/tags",icon:Tags}];
 export function App(){const location=useLocation();if(location.pathname==="/verify-email")return <VerifyEmailPage/>;if(location.pathname==="/forgot-password")return <ForgotPasswordPage/>;if(location.pathname==="/reset-password")return <ResetPasswordPage/>;return <AuthenticatedApplication/>;}
 function AuthenticatedApplication(){
