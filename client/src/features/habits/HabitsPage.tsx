@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, Check, Plus, Target } from "lucide-react";
 import { format } from "date-fns";
@@ -15,6 +16,8 @@ export function HabitsPage(){
  const[frequency,setFrequency]=useState<"daily"|"weekly">("daily");
  const[days,setDays]=useState([1,2,3,4,5]);
  const[showForm,setShowForm]=useState(false);
+ const[searchParams,setSearchParams]=useSearchParams();
+ useEffect(()=>{if(searchParams.get("create")!=="1")return;setShowForm(true);const next=new URLSearchParams(searchParams);next.delete("create");setSearchParams(next,{replace:true});},[searchParams,setSearchParams]);
  const queryClient=useQueryClient();
  const today=format(new Date(),"yyyy-MM-dd");
  const habitsQuery=useQuery({queryKey:["habits"],queryFn:()=>api<HabitResponse>("/habits")});
