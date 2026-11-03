@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Board, Check, Circle, Filter, List, ListFilter, Plus, SlidersHorizontal } from "lucide-react";
+import { Check, Columns3, Filter, List, Plus, SlidersHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../../lib/api-client";
@@ -69,7 +69,7 @@ export function TasksPage() {
     <div className="feature-toolbar">
       <div className="view-tabs">
         <button className={`view-tab ${view === "list" ? "active" : ""}`} onClick={() => setView("list")}><List size={15}/> List</button>
-        <button className={`view-tab ${view === "board" ? "active" : ""}`} onClick={() => setView("board")}><Board size={15}/> Board</button>
+        <button className={`view-tab ${view === "board" ? "active" : ""}`} onClick={() => setView("board")}><Columns3 size={15}/> Board</button>
         <button className={`button button-secondary button-small ${showFilters ? "filter-active" : ""}`} onClick={() => setShowFilters(value => !value)}><SlidersHorizontal size={15}/> Filters</button>
       </div>
       <div className="filter-pills">{[["all", "All"], ...statuses.map(status => [status.value, status.label])].map(([value, label]) => <button key={value} onClick={() => setFilter(value as typeof filter)} className={filter === value ? "selected" : ""}>{label}</button>)}</div>
