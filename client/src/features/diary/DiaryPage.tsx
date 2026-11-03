@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { addDays, endOfDay, format, startOfDay } from "date-fns";
 import { CalendarDays, ChevronLeft, ChevronRight, Feather, Plus, Save } from "lucide-react";
 import { api, ApiError } from "../../lib/api-client";
@@ -9,10 +10,18 @@ type DiaryEntry={_id:string;title:string;content:unknown;entryDate:string;timezo
 type DiaryListResponse={data:{items:DiaryEntry[];total:number}};
 type DiaryResponse={data:DiaryEntry};
 export function DiaryPage(){
- const[day,setDay]=useState(()=>startOfDay(new Date()));const[activeEntry,setActiveEntry]=useState<string|null>(null);const[title,setTitle]=useState("");const[content,setContent]=useState("");const[savedSnapshot,setSavedSnapshot]=useState({title:"",content:""});const[version,setVersion]=useState(1);const[saveState,setSaveState]=useState<"saved"|"dirty"|"saving"|"error"|"conflict">("saved");const savingRef=useRef(false);
+ const[day,setDay]=useState(()=>{const value=new URLSearchParams(window.location.search).get("date");const parsed=value?new Date(value+"T12:00:00"):new Date();return startOfDay(Number.isNaN(parsed.getTime())?new Date():parsed);});const[activeEntry,setActiveEntry]=useState<string|null>(null);const[title,setTitle]=useState("");const[content,setContent]=useState("");const[savedSnapshot,setSavedSnapshot]=useState({title:"",content:""});const[version,setVersion]=useState(1);const[saveState,setSaveState]=useState<"saved"|"dirty"|"saving"|"error"|"conflict">("saved");const savingRef=useRef(false);
+ const[searchParams,setSearchParams]=useSearchParams();
  const queryClient=useQueryClient();const start=startOfDay(day);const end=endOfDay(day);const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||"Asia/Kolkata";const dateKey=format(day,"yyyy-MM-dd");const listKey=["diary","entries",dateKey] as const;
  const entriesQuery=useQuery({queryKey:listKey,queryFn:()=>api<DiaryListResponse>(`/diary/entries?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(new Date(end.getTime()+1).toISOString())}&page=1&limit=50`)});
  const entries=entriesQuery.data?.data.items??[];
+ useEffect(()=>{
+  const create=searchParams.get("create")==="1";
+  const item=searchParams.get("item");
+  if(create){setActiveEntry(null);setTitle("");setContent("");setSavedSnapshot({title:"",content:""});setVersion(1);setSaveState("saved");}
+  else if(item){const entry=entries.find(candidate=>candidate._id===item);if(entry){const nextContent=typeof entry.content==="string"?entry.content:"";setActiveEntry(entry._id);setTitle(entry.title);setContent(nextContent);setSavedSnapshot({title:entry.title,content:nextContent});setVersion(entry.version);setSaveState("saved");}}
+  if(create||item){const next=new URLSearchParams(searchParams);next.delete("create");next.delete("item");setSearchParams(next,{replace:true});}
+ },[entries,searchParams,setSearchParams]);
  useEffect(()=>{if(!entries.length){if(activeEntry){setActiveEntry(null);setTitle("");setContent("");setSavedSnapshot({title:"",content:""});setVersion(1);setSaveState("saved");}return;}if(!activeEntry||!entries.some(entry=>entry._id===activeEntry)){const first=entries[0]!;const nextContent=typeof first.content==="string"?first.content:"";setActiveEntry(first._id);setTitle(first.title);setContent(nextContent);setSavedSnapshot({title:first.title,content:nextContent});setVersion(first.version);setSaveState("saved");}},[entries,activeEntry]);
  const dirty=title!==savedSnapshot.title||content!==savedSnapshot.content;
  useEffect(()=>{
