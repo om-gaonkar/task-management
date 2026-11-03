@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight, Plus } from "lucide-react";
-import { api } from "../../lib/api-client";\nimport { MediaGallery } from "../media/MediaGallery";
+import { api } from "../../lib/api-client";
+import { MediaGallery } from "../media/MediaGallery";
 
 type Project = { _id: string; name: string; description: string | null; status: string; priority: string; deadline: string | null; progress: number; completedTasks: number; totalEligibleTasks: number; overdueTasks: number; upcomingTasks: number };
 type ProjectResponse = { data: { items: Project[]; total: number } };
