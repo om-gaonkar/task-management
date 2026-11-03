@@ -18,7 +18,7 @@ export function DiaryPage(){
  useEffect(()=>{
   const create=searchParams.get("create")==="1";
   const item=searchParams.get("item");
-  if(create){setIsNewEntry(true);setActiveEntry(null);setTitle("");setContent("");setSavedSnapshot({title:"",content:""});setVersion(1);setSaveState("saved");}
+  if(create){skipAutoSelectRef.current=true;setIsNewEntry(true);setActiveEntry(null);setTitle("");setContent("");setSavedSnapshot({title:"",content:""});setVersion(1);setSaveState("saved");}
   else if(item){
    const entry=entries.find(candidate=>candidate._id===item);
    if(!entry)return;
@@ -54,7 +54,7 @@ export function DiaryPage(){
  const statusLabel=useMemo(()=>({saved:"Saved",dirty:"Unsaved changes",saving:"Saving…",error:"Save failed",conflict:"Edit conflict"}[saveState]),[saveState]);
  function confirmDiscard(){if(savingRef.current){window.alert("A save is still in progress. Wait for it to finish before switching entries.");return false;}return !dirty||window.confirm("You have unsaved changes. Discard them and continue?");}
  function selectEntry(entry:DiaryEntry){if(!confirmDiscard())return;const nextContent=typeof entry.content==="string"?entry.content:"";setIsNewEntry(false);setActiveEntry(entry._id);setTitle(entry.title);setContent(nextContent);setSavedSnapshot({title:entry.title,content:nextContent});setVersion(entry.version);setSaveState("saved");}
- function newEntry(){if(!confirmDiscard())return;setIsNewEntry(true);setActiveEntry(null);setTitle("");setContent("");setSavedSnapshot({title:"",content:""});setVersion(1);setSaveState("saved");}
+ function newEntry(){if(!confirmDiscard())return;skipAutoSelectRef.current=true;setIsNewEntry(true);setActiveEntry(null);setTitle("");setContent("");setSavedSnapshot({title:"",content:""});setVersion(1);setSaveState("saved");}
  function changeDay(next:Date){if(!confirmDiscard())return;setIsNewEntry(false);setDay(startOfDay(next));}
  async function reloadAfterConflict(){const fresh=await entriesQuery.refetch();const latest=fresh.data?.data.items.find(entry=>entry._id===activeEntry);if(latest)selectEntry({...latest,title:latest.title});else setSaveState("error");}
  return <div className="feature-page diary-page"><div className="feature-heading"><div><span className="eyebrow">A SPACE OF YOUR OWN</span><h1>The diary<span className="heading-period">.</span></h1><p className="page-subtitle">Private entries, saved to your account as you write.</p></div><div className="date-switcher"><button className="icon-button" aria-label="Previous day" onClick={()=>changeDay(addDays(day,-1))}><ChevronLeft size={17}/></button><span>{format(day,"EEEE, MMM d, yyyy")}</span><button className="icon-button" aria-label="Next day" onClick={()=>changeDay(addDays(day,1))}><ChevronRight size={17}/></button></div></div>
