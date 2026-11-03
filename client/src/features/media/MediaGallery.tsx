@@ -46,7 +46,7 @@ export function MediaGallery({parentType,parentId}: {parentType:ParentType;paren
   const selected=Array.from(files);
   const allowed=new Set(["image/jpeg","image/png","image/webp","image/gif"]);
   const invalid=selected.find(file=>!allowed.has(file.type)||file.size>8*1024*1024);
-  if(invalid){setMessage(`${invalid.name}: choose a JPEG, PNG, WebP, or GIF image up to 8 MB.`);return;}
+  if(invalid){setMessage(`${invalid.name}: choose a JPEG, PNG, WebP, or GIF image up to 8 MB.`);if(inputRef.current)inputRef.current.value="";return;}
   setMessage(null);uploadMutation.mutate(selected);
  }
  const items=attachments.data?.data??[];
