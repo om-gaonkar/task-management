@@ -22,5 +22,5 @@ export const createHabitSchema = habitFields.superRefine((value, ctx) => {
 export const updateHabitSchema = habitFields.partial();
 
 export const completionSchema = z.object({
-  localDate: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/)
+  localDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 });
